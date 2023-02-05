@@ -1,9 +1,10 @@
+from http import HTTPStatus
+
 from django.test import Client, TestCase
 from django.urls import reverse
-from django import forms
-from posts.models import Group, Post, User
 from posts.forms import PostForm
-from http import HTTPStatus
+from posts.models import Group, Post, User
+
 
 class PostCreateFormTests(TestCase):
     @classmethod
@@ -15,14 +16,14 @@ class PostCreateFormTests(TestCase):
         cls.user = User.objects.create_user(username='user')
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
-        
+
         # create group in DB
         cls.group = Group.objects.create(
             title='Title for post',
             slug='test-slug',
             description='Description for group'
         )
-        
+
         # create post in DB
         cls.post = Post.objects.create(
             text='Text for post',
@@ -30,7 +31,6 @@ class PostCreateFormTests(TestCase):
             group=cls.group,
         )
         cls.form = PostForm()
-        
 
     def test_create_post(self):
         """При отправке валидной формы создается запись"""
@@ -55,8 +55,7 @@ class PostCreateFormTests(TestCase):
             Post.objects.filter(
                 author=PostCreateFormTests.user,
                 group=PostCreateFormTests.group,
-                text='Text for post'
-                ).exists()
+                text='Text for post').exists()
         )
 
     def test_create_post_guest(self):
@@ -73,8 +72,7 @@ class PostCreateFormTests(TestCase):
         )
         self.assertFalse(
             Post.objects.filter(
-                text='Post from non-authorized client'
-                ).exists()
+                text='Post from non-authorized client').exists()
         )
 
     def test_edit_post_authorized(self):
