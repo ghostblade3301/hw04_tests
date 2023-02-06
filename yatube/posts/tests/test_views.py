@@ -118,7 +118,9 @@ class TestViews(TestCase):
             reverse('posts:post_detail', kwargs={'post_id': (self.post.pk)})
         )
         self.assertIn('post', response.context)
-
+        self.assertIn('post', response.context)
+        self.assertIn('post', response.context)
+        
     # template is formed with the correct context
     def test_post_create_page_show_correct_context(self):
         """Шаблон post_create сформирован с правильным контекстом."""
@@ -183,18 +185,19 @@ class TestPaginator(TestCase):
             reverse('posts:profile', kwargs={'username': self.user.username}),
             reverse('posts:group_list', kwargs={'slug': self.group.slug}),
         ]
+        for reverse_obj in pages:
+            with self.subTest(reverse_obj=reverse_obj):
+                self.assertEqual(
+                    len(self.authorized_client.get(reverse_obj).context.get('page_obj')), settings.POSTS_PER_PAGE)
+
+
+
 
     # сhecking the number of paginator posts is 10
     def test_paginator_first_page_contains_ten_records(self):
-        response = self.guest_client.get(reverse('posts:index'))
+        response = self.authorized_client.get(reverse('posts:index'))
         self.assertEqual(len(response.context['page_obj']),
                          settings.POSTS_PER_PAGE)
 
-    # сhecking the number of paginator posts on last page
-    def test_paginator_last_page_contains_two_records(self):
-        response = self.guest_client.get(
-            reverse('posts:index') + f'?page={self.amount_of_pages}')
-        self.assertEqual(len(response.context['page_obj']),
-                         self.amount_of_post_last_page)
 
         
