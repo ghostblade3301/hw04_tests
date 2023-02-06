@@ -18,13 +18,6 @@ class TestPostsURLs(TestCase):
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
 
-        # create post in DB
-        cls.post = Post.objects.create(
-            author=cls.user,
-            id=100,
-            text='Text for test',
-        )
-
         # create group in DB
         cls.group = Group.objects.create(
             title='Test group',
@@ -32,18 +25,25 @@ class TestPostsURLs(TestCase):
             description='Test description',
         )
 
-        # test templates and pages
-    def test_urls_uses_correct_template(self):
-        templates_url_names = {
+        # create post in DB
+        cls.post = Post.objects.create(
+            author=cls.user,
+            group=cls.group,
+            text='Text for test',
+        )
+
+        cls.templates_url_names = {
             '/': 'posts/index.html',
-            '/group/test-slug/': 'posts/group_list.html',
-            '/profile/Test/': 'posts/profile.html',
-            '/posts/100/': 'posts/post_detail.html',
+            f'/group/{cls.post.group.slug}/': 'posts/group_list.html',
+            f'/profile/{cls.user.username}/': 'posts/profile.html',
+            f'/posts/{cls.post.pk}/': 'posts/post_detail.html',
             '/create/': 'posts/create.html',
-            '/posts/100/edit/': 'posts/create.html',
+            f'/posts/{cls.post.pk}/edit/': 'posts/create.html',
         }
 
-        for address, template in templates_url_names.items():
+    # test templates and pages
+    def test_urls_uses_correct_template(self):
+        for address, template in self.templates_url_names.items():
             with self.subTest(address=address):
                 response = self.authorized_client.get(address)
                 self.assertTemplateUsed(response, template)
