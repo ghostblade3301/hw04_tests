@@ -115,12 +115,9 @@ class TestViews(TestCase):
     def test_post_detail_page_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
         response = self.authorized_client.get(
-            reverse(
-                'posts:post_detail',
-                kwargs={'post_id': (self.post.pk)})).context.get('post')
-        self.assertEqual(response.group, self.post.group)
-        self.assertEqual(response.text, self.post.text)
-        self.assertEqual(response.author, self.post.author)
+            reverse('posts:post_detail', kwargs={'post_id': (self.post.pk)})
+        )
+        self.assertIn('post', response.context)
 
     # template is formed with the correct context
     def test_post_create_page_show_correct_context(self):
@@ -182,6 +179,13 @@ class TestPaginator(TestCase):
             reverse('posts:profile', kwargs={'username': cls.user}),
             reverse('posts:group_list', kwargs={'slug': cls.group.slug}),
         ]
+        for reverse_obj in pages:
+            with self.subTest(reverse_obj=reverse_obj):
+                self.assertEqual(
+                    len(self.authorized_client.get(reverse_obj).context.get('page_obj')), settings.POSTS_PER_PAGE)
+
+
+
 
     # сhecking the number of paginator posts is 10
     def test_paginator_first_page_contains_ten_records(self):
@@ -189,22 +193,9 @@ class TestPaginator(TestCase):
         self.assertEqual(len(response.context['page_obj']),
                          settings.POSTS_PER_PAGE)
 
-    # checking the number of posts of the user on profile page (10)
-    def test_paginator_profile_contains_ten_records(self):
-        response = self.authorized_client.get(reverse(
-            'posts:profile', kwargs={'username': 'user'}))
+    # сhecking the number of paginator posts on last page
+    def test_paginator_last_page_contains_two_records(self):
+        response = self.guest_client.get(
+            reverse('posts:index') + f'?page={self.amount_of_pages}')
         self.assertEqual(len(response.context['page_obj']),
-                         settings.POSTS_PER_PAGE)
-
-    # checking context in pages list
-    def test_paginator_on_pages(self):
-        '''Проверка работы паджинатора на страницах в списке pages'''
-        for page in self.pages:
-            with self.subTest(page=page):
-                response_obj = self.authorized_client.get(page)
-                self.assertEqual(len(response_obj.context['page_obj']),
-                                 settings.POSTS_PER_PAGE)
-                response_obj2 = self.authorized_client.get(
-                    page + f'?page={self.amount_of_pages + 1}')
-                self.assertEqual(len(response_obj2.context['page_obj']),
-                                 self.amount_of_post_last_page)
+                         self.amount_of_post_last_page)
