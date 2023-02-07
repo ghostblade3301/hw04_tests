@@ -17,6 +17,9 @@ from django.contrib import admin
 # импорт include позволит использовать адреса, включенные в приложения
 from django.urls import include, path
 
+handler404 = 'core.views.page_not_found'
+
+
 urlpatterns = [
     # Сначала проверяем все пути, которые есть в приложении
     path('', include('posts.urls', namespace='posts')),
