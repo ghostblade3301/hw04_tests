@@ -146,4 +146,3 @@ EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
 # settings.py
 
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
-
