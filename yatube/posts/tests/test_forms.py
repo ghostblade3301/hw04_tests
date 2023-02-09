@@ -31,8 +31,6 @@ class PostCreateFormTests(TestCase):
             group=cls.group,
         )
 
-        cls.index_page = 'posts:index'
-        cls.group_list_page = 'posts:group_list'
         cls.profile_page = 'posts:profile'
         cls.post_detail_page = 'posts:post_detail'
         cls.post_create_page = 'posts:post_create'

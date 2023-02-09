@@ -5,7 +5,7 @@ from django.conf import settings
 
 from posts.models import Group, Post, User
 
-POSTS_COUNT = 5
+POSTS_COUNT = 57
 
 
 class TestViews(TestCase):
@@ -161,8 +161,12 @@ class TestPaginator(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.amount_of_post_last_page = (POSTS_COUNT % settings.POSTS_PER_PAGE)
-        cls.amount_of_pages = POSTS_COUNT // settings.POSTS_PER_PAGE
+        if POSTS_COUNT <= 10:
+            raise NotImplementedError('Need more than 10 posts')
+        else:
+            cls.amount_of_post_last_page = (POSTS_COUNT
+                                            % settings.POSTS_PER_PAGE)
+            cls.amount_of_pages = POSTS_COUNT // settings.POSTS_PER_PAGE
 
         # create user
         cls.user = User.objects.create(username='user')
