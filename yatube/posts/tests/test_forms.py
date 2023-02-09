@@ -30,6 +30,13 @@ class PostCreateFormTests(TestCase):
             author=cls.user,
             group=cls.group,
         )
+        
+        cls.index_page = 'posts:index'
+        cls.group_list_page = 'posts:group_list'
+        cls.profile_page = 'posts:profile'
+        cls.post_detail_page = 'posts:post_detail'
+        cls.post_create_page = 'posts:post_create'
+        cls.post_edit_page = 'posts:post_edit'
 
     def test_create_post_authorized(self):
         """При отправке валидной формы создается запись"""
@@ -40,13 +47,13 @@ class PostCreateFormTests(TestCase):
             'group': self.group.pk,
         }
         response = self.authorized_client.post(
-            reverse('posts:post_create'),
+            reverse(self.post_create_page),
             data=form_data,
             follow=True
         )
         # checking redirect
         self.assertRedirects(response, reverse(
-            'posts:profile', kwargs={'username': PostCreateFormTests.user})
+            self.profile_page, kwargs={'username': PostCreateFormTests.user})
         )
         # checking amount of posts
         self.assertEqual(Post.objects.count(), posts_count + 1)
@@ -65,7 +72,7 @@ class PostCreateFormTests(TestCase):
             'group': self.group.pk,
         }
         response = self.guest_client.post(
-            reverse('posts:post_create'),
+            reverse(self.post_create_page),
             data=form_data,
             follow=True,
         )
@@ -82,16 +89,16 @@ class PostCreateFormTests(TestCase):
             'group': self.group.pk
         }
         response_edit = self.authorized_client.post(
-            reverse('posts:post_edit', args=[self.post.id]),
+            reverse(self.post_edit_page, args=[self.post.id]),
             data=form_data,
             follow=True,)
         self.assertRedirects(
             response_edit,
-            reverse('posts:post_detail', kwargs={'post_id': self.post.id})
+            reverse(self.post_detail_page, kwargs={'post_id': self.post.id})
         )
-        last_post = Post.objects.first()
+
         post_edit = Post.objects.get(pk=self.group.pk)
         self.assertEqual(response_edit.status_code, HTTPStatus.OK)
-        self.assertEqual(last_post.text, form_data['text'])
-        self.assertEqual(last_post.author, self.user)
+        self.assertEqual(post_edit.text, form_data['text'])
+        self.assertEqual(post_edit.author, self.user)
         self.assertEqual(post_edit.group_id, form_data['group'])

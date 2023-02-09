@@ -62,16 +62,23 @@ class TestViews(TestCase):
                 group=cls.group2,
             )
 
+        cls.index_page = 'posts:index'
+        cls.group_list_page = 'posts:group_list'
+        cls.profile_page = 'posts:profile'
+        cls.post_detail_page = 'posts:post_detail'
+        cls.post_create_page = 'posts:post_create'
+        cls.post_edit_page = 'posts:post_edit'
+
         cls.templates_pages_names = {
-            reverse('posts:index'): 'posts/index.html',
-            reverse('posts:group_list', kwargs={'slug': cls.group1.slug}): (
+            reverse(cls.index_page): 'posts/index.html',
+            reverse(cls.group_list_page, kwargs={'slug': cls.group1.slug}): (
                 'posts/group_list.html'),
-            reverse('posts:profile', kwargs={'username': cls.user1}): (
+            reverse(cls.profile_page, kwargs={'username': cls.user1}): (
                 'posts/profile.html'),
-            reverse('posts:post_detail', kwargs={'post_id': cls.post.id}): (
+            reverse(cls.post_detail_page, kwargs={'post_id': cls.post.id}): (
                 'posts/post_detail.html'),
-            reverse('posts:post_create'): 'posts/create.html',
-            reverse('posts:post_edit', kwargs={'post_id': cls.post.id}): (
+            reverse(cls.post_create_page): 'posts/create.html',
+            reverse(cls.post_edit_page, kwargs={'post_id': cls.post.id}): (
                 'posts/create.html'),
         }
 
@@ -93,7 +100,7 @@ class TestViews(TestCase):
     def test_group_page_show_correct_context(self):
         """Шаблон group_list сформирован с правильным контекстом."""
         response = self.authorized_client.get(
-            reverse('posts:group_list', kwargs={'slug': 'test-slug-1'})
+            reverse(self.group_list_page, kwargs={'slug': self.group1.slug})
         )
         self.assertIn('group', response.context)
         self.assertEqual(response.context['group'], self.group1)
@@ -103,7 +110,7 @@ class TestViews(TestCase):
     def test_profile_page_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
         response = self.authorized_client.get(
-            reverse('posts:profile', kwargs={'username': 'User1'})
+            reverse(self.profile_page, kwargs={'username': self.user1})
         )
         self.assertIn('author', response.context)
         self.assertEqual(response.context['author'], self.user1)
@@ -116,7 +123,7 @@ class TestViews(TestCase):
         """Шаблон post_detail сформирован с правильным контекстом."""
         response = self.authorized_client.get(
             reverse(
-                'posts:post_detail',
+                self.post_detail_page,
                 kwargs={'post_id': (self.post.pk)})).context.get('post')
         self.assertEqual(response.group, self.post.group)
         self.assertEqual(response.text, self.post.text)
@@ -139,7 +146,7 @@ class TestViews(TestCase):
     def test_post_edit_page_show_correct_context(self):
         """Шаблон post_edit сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse(
-            'posts:post_edit', args=(self.post.pk,)))
+            self.post_edit_page, args=(self.post.pk,)))
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
@@ -154,8 +161,8 @@ class TestPaginator(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.amount_of_post_last_page = POSTS_COUNT % 10
-        cls.amount_of_pages = POSTS_COUNT // 10
+        cls.amount_of_post_last_page = POSTS_COUNT % settings.POSTS_PER_PAGE
+        cls.amount_of_pages = POSTS_COUNT // settings.POSTS_PER_PAGE
 
         # create user
         cls.user = User.objects.create(username='user')
@@ -170,18 +177,18 @@ class TestPaginator(TestCase):
         # create authorized client
         cls.authorized_client = Client()
 
-        # create posts
-        for post in range(POSTS_COUNT):
-            Post.objects.create(
-                text=f'Test post number {post}',
-                author=cls.user,
-                group=cls.group,
-            )
+        # pages for test
         cls.pages = [
             reverse('posts:index'),
             reverse('posts:profile', kwargs={'username': cls.user}),
             reverse('posts:group_list', kwargs={'slug': cls.group.slug}),
         ]
+
+        # create posts
+        Post.objects.bulk_create(Post(
+            text=f'Test post number {post}',
+            author=cls.user,
+            group=cls.group,) for post in range(POSTS_COUNT))
 
     # сhecking the number of paginator posts is 10
     def test_paginator_first_page_contains_ten_records(self):
@@ -192,7 +199,7 @@ class TestPaginator(TestCase):
     # checking the number of posts of the user on profile page (10)
     def test_paginator_profile_contains_ten_records(self):
         response = self.authorized_client.get(reverse(
-            'posts:profile', kwargs={'username': 'user'}))
+            'posts:profile', kwargs={'username': self.user}))
         self.assertEqual(len(response.context['page_obj']),
                          settings.POSTS_PER_PAGE)
 
