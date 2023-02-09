@@ -30,7 +30,7 @@ class PostCreateFormTests(TestCase):
             author=cls.user,
             group=cls.group,
         )
-        
+
         cls.index_page = 'posts:index'
         cls.group_list_page = 'posts:group_list'
         cls.profile_page = 'posts:profile'
