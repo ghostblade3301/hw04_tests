@@ -20,7 +20,7 @@ class TestPostModels(TestCase):
 
     def test_models_have_correct_object_names(self):
         """Проверка корректности работы __str__."""
-        group = TestPostModels.group
-        post = TestPostModels.post
+        group = self.group
+        post = self.post
         self.assertEqual(str(self.post), post.text[:15])
         self.assertEqual(str(self.group), group.title)
