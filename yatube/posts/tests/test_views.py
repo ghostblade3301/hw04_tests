@@ -26,7 +26,7 @@ class TestViews(TestCase):
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user1)
         cls.authorized_client.force_login(cls.user2)
-        cls.small_gif = (
+        cls.small_gif_1 = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'
             b'\x01\x00\x80\x00\x00\x00\x00\x00'
             b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
@@ -34,9 +34,23 @@ class TestViews(TestCase):
             b'\x02\x00\x01\x00\x00\x02\x02\x0C'
             b'\x0A\x00\x3B'
         )
-        cls.uploaded = SimpleUploadedFile(
-            name='new.gif',
-            content=cls.small_gif,
+        cls.small_gif_2 = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        cls.uploaded_1 = SimpleUploadedFile(
+            name='new1.gif',
+            content=cls.small_gif_1,
+            content_type='image/gif'
+        )
+
+        cls.uploaded_2 = SimpleUploadedFile(
+            name='new2.gif',
+            content=cls.small_gif_2,
             content_type='image/gif'
         )
 
@@ -57,14 +71,14 @@ class TestViews(TestCase):
             text='Test text for user1 group1',
             author=cls.user1,
             group=cls.group1,
-            image=cls.uploaded,
+            image=cls.uploaded_1,
         )
 
         cls.post = Post.objects.create(
             text='Test text for user2 group2',
             author=cls.user2,
             group=cls.group2,
-            image=cls.uploaded,
+            image=cls.uploaded_2,
         )
 
         cls.index_page = 'posts:index'
@@ -104,7 +118,7 @@ class TestViews(TestCase):
     def test_index_page_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:index'))
-        post_object = response.context['page_obj'][1]
+        post_object = response.context['page_obj'][0]
         self.assertIn('page_obj', response.context)
         self.assertEqual(post_object.image, self.post.image)
 
@@ -112,11 +126,13 @@ class TestViews(TestCase):
     def test_group_page_show_correct_context(self):
         """Шаблон group_list сформирован с правильным контекстом."""
         response = self.authorized_client.get(
-            reverse(self.group_list_page, kwargs={'slug': self.group1.slug})
+            reverse(self.group_list_page, kwargs={'slug': self.group2.slug})
         )
+        post_object = response.context['page_obj'][0]
         self.assertIn('group', response.context)
-        self.assertEqual(response.context['group'], self.group1)
+        self.assertEqual(response.context['group'], self.group2)
         self.assertIn('page_obj', response.context)
+        self.assertEqual(post_object.image, self.post.image)
 
     # checking context of profile template
     def test_profile_page_show_correct_context(self):
@@ -124,11 +140,13 @@ class TestViews(TestCase):
         response = self.authorized_client.get(
             reverse(self.profile_page, kwargs={'username': self.user2})
         )
+        post_object = response.context['page_obj'][0]
         self.assertIn('author', response.context)
         self.assertEqual(response.context['author'], self.user2)
         self.assertIn('posts_count', response.context)
         self.assertIn('page_obj', response.context)
         self.assertEqual(response.context['author'], self.user2)
+        self.assertEqual(post_object.image, self.post.image)
 
     # post_detail template is formed with the correct context
     def test_post_detail_page_show_correct_context(self):
@@ -140,6 +158,7 @@ class TestViews(TestCase):
         self.assertEqual(response.group, self.post.group)
         self.assertEqual(response.text, self.post.text)
         self.assertEqual(response.author, self.post.author)
+        self.assertEqual(response.image, self.post.image)
 
     # template is formed with the correct context
     def test_post_create_page_show_correct_context(self):

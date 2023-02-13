@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 
-from posts.models import Group, Post, User
+from posts.models import Group, Post, User, Comment
 
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -133,3 +133,42 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(post_edit.text, form_data['text'])
         self.assertEqual(post_edit.author, self.user)
         self.assertEqual(post_edit.group_id, form_data['group'])
+
+
+class CommentTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username='user')
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.user)
+
+        # create group in DB
+        cls.group = Group.objects.create(
+            title='Title for post',
+            slug='test-slug',
+            description='Description for group'
+        )
+
+        # create post in DB
+        cls.post = Post.objects.create(
+            text='Text for post',
+            author=cls.user,
+            group=cls.group,
+        )
+
+    def test_comment_form(self):
+        """Проверка создания комментария с дальнейшим редиректом"""
+        form_data = {
+            'text': 'Test comment',
+        }
+        response = self.authorized_client.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=form_data,)
+        self.assertRedirects(
+            response,
+            reverse('posts:post_detail', kwargs={'post_id': self.post.id}))
+        comment = Comment.objects.get(text=form_data['text'])
+        self.assertEqual(comment.author, self.user)
+        self.assertEqual(comment.text, form_data['text'])
+        self.assertEqual(comment.post.id, self.post.id)
