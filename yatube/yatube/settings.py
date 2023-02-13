@@ -37,7 +37,7 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
     'about.apps.AboutConfig',
-    'core',
+    'core.apps.CoreConfig',
     'posts.apps.PostsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'sorl.thumbnail',
 ]
 
 MIDDLEWARE = [
@@ -146,3 +147,5 @@ EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
 # settings.py
 
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

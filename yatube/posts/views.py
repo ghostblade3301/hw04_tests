@@ -76,7 +76,11 @@ def post_create(request):
 @login_required
 def post_edit(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    form = PostForm(request.POST or None, instance=post)
+    
+    form = PostForm(
+        request.POST or None,
+        files=request.FILES or None,
+        instance=post,)
     template = 'posts/create.html'
 
     if request.user != post.author:

@@ -51,7 +51,7 @@ class PostCreateFormTests(TestCase):
         )
         # checking redirect
         self.assertRedirects(response, reverse(
-            self.profile_page, kwargs={'username': PostCreateFormTests.user})
+            self.profile_page, kwargs={'username': self.user})
         )
         # checking amount of posts
         self.assertEqual(Post.objects.count(), posts_count + 1)
