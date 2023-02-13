@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import PostForm
+from .forms import PostForm, CommentForm
 from .models import Group, Post
 
 
@@ -49,10 +49,14 @@ def profile(request, username):
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post, pk=post_id)
+    post = get_object_or_404(Post, id=post_id)
     template = 'posts/post_detail.html'
+    comments = post.comments.all()
+    form = CommentForm(request.POST or None)
     context = {
         'post': post,
+        'form': form,
+        'comments': comments,
     }
     return render(request, template, context)
 
@@ -76,7 +80,6 @@ def post_create(request):
 @login_required
 def post_edit(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    
     form = PostForm(
         request.POST or None,
         files=request.FILES or None,
@@ -96,3 +99,20 @@ def post_edit(request, post_id):
         'post': post,
     }
     return render(request, template, context)
+
+
+@login_required
+def add_comment(request, post_id):
+    # Получите пост и сохраните его в переменную post.
+    post = get_object_or_404(Post, id=post_id)
+    form = CommentForm(request.POST or None)
+    context = {
+        'form': form,
+    }
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.author = request.user
+        comment.post = post
+        comment.save()
+        return redirect('posts:post_detail', post_id=post_id)
+    return render(request, 'posts/post_detail.html', context)

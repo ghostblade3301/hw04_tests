@@ -1,13 +1,19 @@
+import shutil
+import tempfile
+
 from django import forms
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from posts.models import Group, Post, User
 
 POSTS_COUNT = 57
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class TestViews(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -20,6 +26,19 @@ class TestViews(TestCase):
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user1)
         cls.authorized_client.force_login(cls.user2)
+        cls.small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        cls.uploaded = SimpleUploadedFile(
+            name='new.gif',
+            content=cls.small_gif,
+            content_type='image/gif'
+        )
 
         # create first group in DB
         cls.group1 = Group.objects.create(
@@ -38,29 +57,15 @@ class TestViews(TestCase):
             text='Test text for user1 group1',
             author=cls.user1,
             group=cls.group1,
+            image=cls.uploaded,
         )
 
         cls.post = Post.objects.create(
             text='Test text for user2 group2',
             author=cls.user2,
             group=cls.group2,
+            image=cls.uploaded,
         )
-
-        # create 15 posts in first group
-        for post in range(15):
-            cls.post = Post.objects.create(
-                text='Posts of group1',
-                author=cls.user1,
-                group=cls.group1
-            )
-
-        # create 5 posts in second group
-        for post in range(5):
-            cls.post = Post.objects.create(
-                text='Posts of group2',
-                author=cls.user2,
-                group=cls.group2,
-            )
 
         cls.index_page = 'posts:index'
         cls.group_list_page = 'posts:group_list'
@@ -73,7 +78,7 @@ class TestViews(TestCase):
             reverse(cls.index_page): 'posts/index.html',
             reverse(cls.group_list_page, kwargs={'slug': cls.group1.slug}): (
                 'posts/group_list.html'),
-            reverse(cls.profile_page, kwargs={'username': cls.user1}): (
+            reverse(cls.profile_page, kwargs={'username': cls.user2}): (
                 'posts/profile.html'),
             reverse(cls.post_detail_page, kwargs={'post_id': cls.post.id}): (
                 'posts/post_detail.html'),
@@ -81,6 +86,11 @@ class TestViews(TestCase):
             reverse(cls.post_edit_page, kwargs={'post_id': cls.post.id}): (
                 'posts/create.html'),
         }
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     # checking templates and reverse names
     def test_pages_uses_correct_template(self):
@@ -94,7 +104,9 @@ class TestViews(TestCase):
     def test_index_page_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:index'))
+        post_object = response.context['page_obj'][1]
         self.assertIn('page_obj', response.context)
+        self.assertEqual(post_object.image, self.post.image)
 
     # checking context of group_list
     def test_group_page_show_correct_context(self):
@@ -110,13 +122,13 @@ class TestViews(TestCase):
     def test_profile_page_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
         response = self.authorized_client.get(
-            reverse(self.profile_page, kwargs={'username': self.user1})
+            reverse(self.profile_page, kwargs={'username': self.user2})
         )
         self.assertIn('author', response.context)
-        self.assertEqual(response.context['author'], self.user1)
+        self.assertEqual(response.context['author'], self.user2)
         self.assertIn('posts_count', response.context)
         self.assertIn('page_obj', response.context)
-        self.assertEqual(response.context['author'], self.user1)
+        self.assertEqual(response.context['author'], self.user2)
 
     # post_detail template is formed with the correct context
     def test_post_detail_page_show_correct_context(self):
