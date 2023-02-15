@@ -1,8 +1,9 @@
 # posts/tests/test_urls.py
 from http import HTTPStatus
-from django.core.cache import cache
 
+from django.core.cache import cache
 from django.test import Client, TestCase
+
 from posts.models import Group, Post, User
 
 
@@ -40,6 +41,7 @@ class TestPostsURLs(TestCase):
             f'/posts/{cls.post.pk}/': 'posts/post_detail.html',
             '/create/': 'posts/create.html',
             f'/posts/{cls.post.pk}/edit/': 'posts/create.html',
+            '/nopage/': 'core/404.html',
         }
 
     # test templates and pages
