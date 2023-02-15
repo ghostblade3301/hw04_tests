@@ -5,6 +5,7 @@ from django import forms
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.conf import settings
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from posts.models import Group, Post, User
@@ -100,7 +101,10 @@ class TestViews(TestCase):
             reverse(cls.post_edit_page, kwargs={'post_id': cls.post.id}): (
                 'posts/create.html'),
         }
-
+        
+    def setUp(self):
+        cache.clear()
+        
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -186,7 +190,23 @@ class TestViews(TestCase):
             with self.subTest(value=value):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
-
+                
+    def test_cache(self):
+        """Тестируем кэш"""
+        post = Post.objects.create(
+            text='Testing text',
+            author=self.user1,
+            group=self.group1
+        )
+        response_1 = self.authorized_client.get(reverse(self.index_page))
+        response_before_del = response_1.context['page_obj'][0]
+        self.assertEqual(post, response_before_del)
+        post.delete()
+        response_2 = self.authorized_client.get(reverse(self.index_page))
+        self.assertEqual(response_1.content, response_2.content)
+        cache.clear()
+        response_3 = self.authorized_client.get(reverse(self.index_page))
+        self.assertNotEqual(response_1.content, response_3.content)
 
 class TestPaginator(TestCase):
     @classmethod
@@ -224,6 +244,9 @@ class TestPaginator(TestCase):
             text=f'Test post number {post}',
             author=cls.user,
             group=cls.group,) for post in range(POSTS_COUNT))
+        
+    def setUp(self):
+        cache.clear()
 
     # сhecking the number of paginator posts is 10
     def test_paginator_first_page_contains_ten_records(self):

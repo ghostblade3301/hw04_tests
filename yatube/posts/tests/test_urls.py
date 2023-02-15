@@ -1,5 +1,6 @@
 # posts/tests/test_urls.py
 from http import HTTPStatus
+from django.core.cache import cache
 
 from django.test import Client, TestCase
 from posts.models import Group, Post, User
@@ -43,6 +44,7 @@ class TestPostsURLs(TestCase):
 
     # test templates and pages
     def test_urls_uses_correct_template(self):
+        cache.clear()
         for address, template in self.templates_url_names.items():
             with self.subTest(address=address):
                 response = self.authorized_client.get(address)
