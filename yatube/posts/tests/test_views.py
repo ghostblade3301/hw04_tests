@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from posts.models import Group, Post, User
+from posts.models import Group, Post, User, Follow
 
 POSTS_COUNT = 57
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -101,10 +101,10 @@ class TestViews(TestCase):
             reverse(cls.post_edit_page, kwargs={'post_id': cls.post.id}): (
                 'posts/create.html'),
         }
-        
+
     def setUp(self):
         cache.clear()
-        
+
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -190,7 +190,7 @@ class TestViews(TestCase):
             with self.subTest(value=value):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
-                
+
     def test_cache(self):
         """Тестируем кэш"""
         post = Post.objects.create(
@@ -207,6 +207,7 @@ class TestViews(TestCase):
         cache.clear()
         response_3 = self.authorized_client.get(reverse(self.index_page))
         self.assertNotEqual(response_1.content, response_3.content)
+
 
 class TestPaginator(TestCase):
     @classmethod
@@ -244,7 +245,7 @@ class TestPaginator(TestCase):
             text=f'Test post number {post}',
             author=cls.user,
             group=cls.group,) for post in range(POSTS_COUNT))
-        
+
     def setUp(self):
         cache.clear()
 
@@ -273,3 +274,50 @@ class TestPaginator(TestCase):
                     page + f'?page={self.amount_of_pages + 1}')
                 self.assertEqual(len(response_obj2.context['page_obj']),
                                  self.amount_of_post_last_page)
+
+
+class FollowingTest(TestCase):
+    """Тест подписок на автора поста"""
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user1 = User.objects.create_user(username='User1')
+        cls.user2 = User.objects.create_user(username='User2')
+        cls.user3 = User.objects.create_user(username='User3')
+        cls.authorized_user1 = Client()
+        cls.authorized_user1.force_login(cls.user1)
+        cls.authorized_user2 = Client()
+        cls.authorized_user2.force_login(cls.user2)
+
+    def test_authorized_user_can_follow(self):
+        """Авторизированный пользователь имеет
+        возможность подписаться на автора поста."""
+        page = reverse('posts:profile_follow',
+                       kwargs={'username': self.user3})
+        self.authorized_user1.get(page)
+        self.assertTrue(
+            Follow.objects.filter(
+                user=self.user1,
+                author=self.user3).exists()
+        )
+
+    def test_authorized_user_can_unfollow(self):
+        """Авторизированный пользователь может отписываться пользователей."""
+        Follow.objects.create(user=self.user2, author=self.user3)
+        page = reverse('posts:profile_unfollow',
+                       kwargs={'username': self.user3})
+        self.authorized_user2.get(page)
+        self.assertFalse(
+            Follow.objects.filter(user=self.user2, author=self.user3).exists())
+
+    def test_new_post_appears_only_subscriber(self):
+        """Новая запись появляется у подписавшихся"""
+        Follow.objects.create(user=self.user1, author=self.user3)
+        post = Post.objects.create(author=self.user3, text='Test text')
+        page = reverse('posts:follow_index')
+        response_obj_1 = self.authorized_user1.get(page)
+        response_obj_2 = self.authorized_user2.get(page)
+        test_post1 = response_obj_1.context['page_obj']
+        test_post2 = response_obj_2.context['page_obj']
+        self.assertIn(post, test_post1)
+        self.assertNotIn(post, test_post2)
